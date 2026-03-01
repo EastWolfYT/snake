@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="pl">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Snake</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            flex-direction: column;
+            align-items: center;
+            align-content: center;
+            background-color: rgba(48, 37, 61);
+        }
+
+        h1 {
+            font-family: Arial, Helvetica, sans-serif;
+            color: rgba(57, 193, 224);
+        }
+
+        #container {
+            width: 500px;
+            height: 500px;
+        }
+
+        .piece {
+            width: 25px;
+            height: 25px;
+            float: left;
+            border: 1px solid black;
+            box-sizing: border-box;
+            background-color: white;
+        }
+
+        .border {
+            background-color: pink;
+        }
+
+        .fruit,
+        .snake.head,
+        .snake.body,
+        .snake.tail {
+            background-image: url(gfx/snake-graphics.png);
+            background-size: 125px 100px;
+            /* 5 x 25, 4 x 25 */
+            background-repeat: no-repeat;
+        }
+
+
+        .fruit {
+            background-position: 0px -75px;
+        }
+
+        .snake.head.up {
+            background-position: -75px 0;
+        }
+
+        .snake.head.right {
+            background-position: -100px 0;
+        }
+
+        .snake.head.down {
+            background-position: -100px -25px;
+        }
+
+        .snake.head.left {
+            background-position: -75px -25px;
+        }
+
+        .snake.body.horizontal {
+            background-position: -25px 0px;
+        }
+
+        .snake.body.vertical {
+            background-position: -50px -25px;
+        }
+
+
+        .snake.body.turn-dr {
+            background-position: 0px 0px;
+
+        }
+
+        .snake.body.turn-ur {
+            background-position: 0px -25px;
+
+        }
+
+        .snake.body.turn-dl {
+            background-position: -50px 0px;
+
+        }
+
+        .snake.body.turn-ul {
+            background-position: -50px -50px;
+
+        }
+
+
+        .snake.tail.down {
+            background-position: -75px -50px;
+        }
+
+        .snake.tail.left {
+            background-position: -100px -50px;
+        }
+
+        .snake.tail.right {
+            background-position: -75px -75px;
+        }
+
+        .snake.tail.up {
+            background-position: -100px -75px;
+        }
+    </style>
+
+</head>
+
+<body>
+    <h1>Snake</h1>
+    <div id="container"></div>
+
+    <script>
+        const size = 20;
+        const arr = [];
+        let len = 4;
+        const head = { x: null, y: null };
+        let dir = "right";
+        let speed = 300;
+        let timer = null;
+
+        document.onkeydown = e => {
+            if (e.key == "ArrowUp" && dir != "down") dir = "up";
+            if (e.key == "ArrowDown" && dir != "up") dir = "down";
+            if (e.key == "ArrowLeft" && dir != "right") dir = "left";
+            if (e.key == "ArrowRight" && dir != "left") dir = "right";
+        };
+
+        function startMoving() {
+            clearInterval(timer);
+            timer = setInterval(moveSnake, speed);
+        }
+
+        function placeApple() {
+            let x, y;
+            do {
+                x = Math.floor(Math.random() * size);
+                y = Math.floor(Math.random() * size);
+            } while (arr[y][x].type == "border" || arr[y][x].id > 0);
+            arr[y][x].type = "fruit";
+        }
+
+        function moveSnake() {
+            let nx = head.x;
+            let ny = head.y;
+            if (dir == "up") ny--;
+            if (dir == "down") ny++;
+            if (dir == "left") nx--;
+            if (dir == "right") nx++;
+
+            if (arr[ny][nx].type == "border" || arr[ny][nx].id > 0) {
+                alert("KONIEC");
+                clearInterval(timer);
+                return;
+            }
+
+            let zjadl = (arr[ny][nx].type == "fruit");
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    if (arr[y][x].id > 0) arr[y][x].id++;
+                }
+            }
+
+            arr[ny][nx].id = 1;
+            arr[ny][nx].type = null;
+
+            if (zjadl) {
+                len++;
+                speed -= 20;
+                if (speed < 50) speed = 50;
+                placeApple();
+            }
+
+            // obcięcie ogona
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    if (arr[y][x].id > len) arr[y][x].id = 0;
+                }
+            }
+
+            head.x = nx;
+            head.y = ny;
+
+            generatePlayField();
+            startMoving();
+        }
+
+        function generateArr() {
+            for (let y = 0; y < size; y++) {
+                arr[y] = [];
+                for (let x = 0; x < size; x++) {
+                    arr[y][x] = { type: null, id: 0 };
+                    if (y == 0 || x == 0 || y == size - 1 || x == size - 1)
+                        arr[y][x].type = "border";
+                }
+            }
+        }
+
+        function generateSnake() {
+            const x = Math.floor(size / 2);
+            const y = Math.floor(size / 2);
+            head.x = x;
+            head.y = y;
+            arr[y][x].id = 1;
+            generatePlayField();
+        }
+
+        // ciało (segment pośredni)
+        function bodyClass(x, y, id) {
+            let prev = null;
+            let next = null;
+
+            if (y > 0 && arr[y - 1][x].id == id - 1) prev = "up";
+            if (y < size - 1 && arr[y + 1][x].id == id - 1) prev = "down";
+            if (x > 0 && arr[y][x - 1].id == id - 1) prev = "left";
+            if (x < size - 1 && arr[y][x + 1].id == id - 1) prev = "right";
+
+            if (y > 0 && arr[y - 1][x].id == id + 1) next = "up";
+            if (y < size - 1 && arr[y + 1][x].id == id + 1) next = "down";
+            if (x > 0 && arr[y][x - 1].id == id + 1) next = "left";
+            if (x < size - 1 && arr[y][x + 1].id == id + 1) next = "right";
+
+            if (!prev || !next) {
+                if (prev == "up" || prev == "down" || next == "up" || next == "down") return "vertical";
+                return "horizontal";
+            }
+
+            if ((prev == "left" && next == "right") || (prev == "right" && next == "left"))
+                return "horizontal";
+            if ((prev == "up" && next == "down") || (prev == "down" && next == "up"))
+                return "vertical";
+
+            if ((prev == "up" && next == "right") || (prev == "right" && next == "up"))
+                return "turn-ur";
+            if ((prev == "up" && next == "left") || (prev == "left" && next == "up"))
+                return "turn-ul";
+            if ((prev == "down" && next == "right") || (prev == "right" && next == "down"))
+                return "turn-dr";
+            if ((prev == "down" && next == "left") || (prev == "left" && next == "down"))
+                return "turn-dl";
+
+            return "horizontal";
+        }
+
+        // ogon – ostatni segment, kierunek = PRZECIWNY do poprzedniego
+        function tailClass(x, y, id) {
+            let prev = null;
+
+            if (y > 0 && arr[y - 1][x].id == id - 1) prev = "up";
+            if (y < size - 1 && arr[y + 1][x].id == id - 1) prev = "down";
+            if (x > 0 && arr[y][x - 1].id == id - 1) prev = "left";
+            if (x < size - 1 && arr[y][x + 1].id == id - 1) prev = "right";
+
+
+            if (prev == "up") return "down";
+            if (prev == "down") return "up";
+            if (prev == "left") return "right";
+            if (prev == "right") return "left";
+
+            return "down"; 
+        }
+
+        function generatePlayField() {
+            const container = document.getElementById("container");
+            container.innerHTML = "";
+
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const cell = arr[y][x];
+                    const el = document.createElement("div");
+                    el.classList.add("piece");
+
+                    if (cell.type == "border") el.classList.add("border");
+                    if (cell.type == "fruit") el.classList.add("fruit");
+
+                    if (cell.id > 0) {
+                        if (cell.id == 1) {
+                            // głowa
+                            el.classList.add("snake", "head");
+                            if (dir == "up") el.classList.add("up");
+                            if (dir == "down") el.classList.add("down");
+                            if (dir == "left") el.classList.add("left");
+                            if (dir == "right") el.classList.add("right");
+                        } else if (cell.id == len) {
+                            // ogon
+                            el.classList.add("snake", "tail");
+                            const tdir = tailClass(x, y, cell.id);
+                            el.classList.add(tdir);
+                        } else {
+                            // ciało
+                            el.classList.add("snake", "body");
+                            const cls = bodyClass(x, y, cell.id);
+                            el.classList.add(cls);
+                        }
+                    }
+                    container.appendChild(el);
+                }
+            }
+        }
+
+        generateArr();
+        generateSnake();
+        placeApple();
+        generatePlayField();
+        startMoving();
+    </script>
+
+</body>
+
+</html>
